@@ -1,7 +1,10 @@
+// backend/src/api/routes/projects.ts
+
 import { Router } from "express";
-import { ok, notFound } from "../lib/response";
+import { ok, created, badRequest, notFound } from "../lib/response";
 import { asyncHandler } from "../middleware/errorHandler";
 import * as service from "../services/projects";
+import { query } from "../../lib/db";
 
 const router = Router();
 
@@ -16,7 +19,6 @@ router.post(
       return badRequest(res, "orgId and name are required");
     }
 
-    // Verify the org exists
     const orgCheck = await query(
       `SELECT id FROM organizations WHERE id = $1`,
       [orgId]

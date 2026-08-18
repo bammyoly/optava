@@ -241,6 +241,7 @@ export interface SearchOptions {
   limit?:       number;
   sourceTypes?: SourceType[];
   minSimilarity?: number;
+  threshold?:    number;
 }
 
 export interface SearchResult {
@@ -261,7 +262,10 @@ export async function semanticSearch(
     limit         = 5,
     sourceTypes,
     minSimilarity = 0,
+    threshold,
   } = options;
+
+  const effectiveMinSimilarity = threshold ?? minSimilarity;
 
   // Generate embedding for the query
   const { embedding } = await generateEmbedding(queryText);

@@ -1,9 +1,12 @@
+// backend/src/api/routes/org-members.ts
+
 import { Router } from "express";
 import { ok, created, badRequest, notFound } from "../lib/response";
 import { asyncHandler } from "../middleware/errorHandler";
 import * as memberService from "../services/org-members";
-import * as inviteService from "../services/invitations";
-import * as orgService from "../services/organizations";
+import * as inviteService  from "../services/invitations";
+import * as orgService     from "../services/organizations";
+import { query } from "../../lib/db";
 
 const router = Router();
 
@@ -32,12 +35,9 @@ router.post(
       return badRequest(res, "orgId, email, and invitedBy are required");
     }
 
-    // Get org name and inviter name
     const org = await orgService.getOrganization(orgId);
     if (!org) return notFound(res, "Organization not found");
 
-    // Get inviter name from users table
-    const { query } = await import("../../lib/db");
     const inviterResult = await query(
       `SELECT name FROM users WHERE id = $1`,
       [invitedBy]
@@ -57,7 +57,7 @@ router.post(
   })
 );
 
-/* PATCH /org-members/:userId — change role */
+/* PATCH /org-members/:userId */
 router.patch(
   "/:userId",
   asyncHandler(async (req, res) => {
