@@ -1,0 +1,12 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/api/backend/:path*",
+      "destination": "https://optava-api.onrender.com/api/:path*"
+    }
+  ]
+}
