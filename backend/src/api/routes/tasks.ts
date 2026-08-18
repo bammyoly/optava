@@ -5,7 +5,6 @@ import * as service from "../services/tasks";
 
 const router = Router();
 
-/* GET /tasks?projectId=...&status=... */
 router.get("/", asyncHandler(async (req, res) => {
   const { projectId, status } = req.query;
 
@@ -21,9 +20,8 @@ router.get("/", asyncHandler(async (req, res) => {
   return ok(res, tasks, { count: tasks.length });
 }));
 
-/* GET /tasks/:id */
 router.get("/:id", asyncHandler(async (req, res) => {
-  const task = await service.getTask(req.params.id);
+  const task = await service.getTask(req.params.id as string);
 
   if (!task) {
     return notFound(res, "Task not found");
@@ -32,7 +30,6 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return ok(res, task);
 }));
 
-/* POST /tasks */
 router.post("/", asyncHandler(async (req, res) => {
   const { project_id, task_code, title } = req.body;
 
@@ -44,9 +41,8 @@ router.post("/", asyncHandler(async (req, res) => {
   return created(res, task);
 }));
 
-/* PATCH /tasks/:id */
 router.patch("/:id", asyncHandler(async (req, res) => {
-  const task = await service.updateTask(req.params.id, req.body);
+  const task = await service.updateTask(req.params.id as string, req.body);
 
   if (!task) {
     return notFound(res, "Task not found");

@@ -5,7 +5,6 @@ import * as service from "../services/team";
 
 const router = Router();
 
-/* GET /team?projectId=... */
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -20,11 +19,10 @@ router.get(
   })
 );
 
-/* GET /team/:id?projectId not needed — id is enough */
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    const member = await service.getTeamMember(req.params.id);
+    const member = await service.getTeamMember(req.params.id as string);
 
     if (!member) {
       return notFound(res, "Team member not found");
@@ -34,7 +32,6 @@ router.get(
   })
 );
 
-/* POST /team */
 router.post(
   "/",
   asyncHandler(async (req, res) => {

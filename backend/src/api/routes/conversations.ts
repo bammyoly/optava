@@ -5,7 +5,6 @@ import * as service from "../services/conversations";
 
 const router = Router();
 
-/* GET /conversations/sessions?projectId=... */
 router.get("/sessions", asyncHandler(async (req, res) => {
   const { projectId } = req.query;
 
@@ -17,9 +16,8 @@ router.get("/sessions", asyncHandler(async (req, res) => {
   return ok(res, sessions, { count: sessions.length });
 }));
 
-/* GET /conversations/:sessionId */
 router.get("/:sessionId", asyncHandler(async (req, res) => {
-  const messages = await service.getSession(req.params.sessionId);
+  const messages = await service.getSession(req.params.sessionId as string);
   return ok(res, messages, { count: messages.length });
 }));
 

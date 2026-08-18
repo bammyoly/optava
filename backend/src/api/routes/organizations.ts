@@ -1,5 +1,3 @@
-//backend/src/api/routes/orgranizations.ts
-
 import { Router } from "express";
 import { ok, created, badRequest, notFound } from "../lib/response";
 import { asyncHandler } from "../middleware/errorHandler";
@@ -7,28 +5,19 @@ import * as service from "../services/organizations";
 
 const router = Router();
 
-/* POST /organizations — create org + project */
-// backend/src/api/routes/organizations.ts
-// Replace the POST "/" handler
-
 router.post(
   "/",
   asyncHandler(async (req, res) => {
     const { name, slug, userId, projectName, projectDescription } = req.body;
 
     console.log("[POST /organizations] Body:", {
-      name,
-      slug,
-      userId,
-      projectName,
-      projectDescription,
+      name, slug, userId, projectName, projectDescription,
     });
 
     if (!name || !slug || !userId || !projectName) {
       return badRequest(res, "name, slug, userId, and projectName are required");
     }
 
-    // Validate userId looks like a UUID before hitting DB
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(userId)) {
@@ -59,18 +48,15 @@ router.post(
       });
 
       return created(res, result);
-
     } catch (err: any) {
-      // Surface USER_NOT_FOUND as a 400 not a 500
       if (err.message?.includes("USER_NOT_FOUND")) {
         return badRequest(res, err.message);
       }
-      throw err; // let errorHandler deal with other errors
+      throw err;
     }
   })
 );
 
-/* GET /organizations/check-slug?slug=... */
 router.get(
   "/check-slug",
   asyncHandler(async (req, res) => {
@@ -85,11 +71,10 @@ router.get(
   })
 );
 
-/* GET /organizations/by-user/:userId */
 router.get(
   "/by-user/:userId",
   asyncHandler(async (req, res) => {
-    const result = await service.getUserOrganization(req.params.userId);
+    const result = await service.getUserOrganization(req.params.userId as string);
 
     if (!result) {
       return notFound(res, "User has no organization");
@@ -99,11 +84,10 @@ router.get(
   })
 );
 
-/* GET /organizations/:id */
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    const org = await service.getOrganization(req.params.id);
+    const org = await service.getOrganization(req.params.id as string);
 
     if (!org) {
       return notFound(res, "Organization not found");
@@ -113,13 +97,12 @@ router.get(
   })
 );
 
-/* PATCH /organizations/:id */
 router.patch(
   "/:id",
   asyncHandler(async (req, res) => {
     const { name } = req.body;
 
-    const updated = await service.updateOrganization(req.params.id, { name });
+    const updated = await service.updateOrganization(req.params.id as string, { name });
 
     if (!updated) {
       return notFound(res, "Organization not found");
@@ -129,11 +112,10 @@ router.patch(
   })
 );
 
-/* DELETE /organizations/:id */
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    await service.deleteOrganization(req.params.id);
+    await service.deleteOrganization(req.params.id as string);
     return ok(res, { deleted: true });
   })
 );

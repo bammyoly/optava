@@ -5,7 +5,6 @@ import * as service from "../services/decisions";
 
 const router = Router();
 
-/* GET /decisions?projectId=...&category=... */
 router.get("/", asyncHandler(async (req, res) => {
   const { projectId, category } = req.query;
 
@@ -21,9 +20,8 @@ router.get("/", asyncHandler(async (req, res) => {
   return ok(res, decisions, { count: decisions.length });
 }));
 
-/* GET /decisions/:id */
 router.get("/:id", asyncHandler(async (req, res) => {
-  const decision = await service.getDecision(req.params.id);
+  const decision = await service.getDecision(req.params.id as string);
 
   if (!decision) {
     return notFound(res, "Decision not found");
@@ -32,7 +30,6 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return ok(res, decision);
 }));
 
-/* POST /decisions */
 router.post("/", asyncHandler(async (req, res) => {
   const { project_id, title, context, rationale, alternatives, category, author } = req.body;
 

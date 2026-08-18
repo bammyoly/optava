@@ -5,7 +5,6 @@ import * as service from "../services/standups";
 
 const router = Router();
 
-/* GET /standups?projectId=... */
 router.get("/", asyncHandler(async (req, res) => {
   const { projectId } = req.query;
 
@@ -17,9 +16,8 @@ router.get("/", asyncHandler(async (req, res) => {
   return ok(res, standups, { count: standups.length });
 }));
 
-/* GET /standups/:id */
 router.get("/:id", asyncHandler(async (req, res) => {
-  const standup = await service.getStandup(req.params.id);
+  const standup = await service.getStandup(req.params.id as string);
 
   if (!standup) {
     return notFound(res, "Standup not found");
@@ -28,7 +26,6 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return ok(res, standup);
 }));
 
-/* POST /standups/generate?projectId=... */
 router.post("/generate", asyncHandler(async (req, res) => {
   const projectId =
     (req.query.projectId as string) ||

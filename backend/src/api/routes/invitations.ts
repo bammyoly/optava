@@ -5,23 +5,21 @@ import * as service from "../services/invitations";
 
 const router = Router();
 
-/* GET /invitations/:token — public, no auth required */
 router.get(
   "/:token",
   asyncHandler(async (req, res) => {
-    const invitation = await service.getInvitationByToken(req.params.token);
+    const invitation = await service.getInvitationByToken(req.params.token as string);
 
     if (!invitation) {
       return notFound(res, "Invitation not found");
     }
 
-    // Don't expose sensitive fields publicly
     return ok(res, {
-      id:         invitation.id,
-      org_name:   invitation.org_name,
-      org_slug:   invitation.org_slug,
-      email:      invitation.email,
-      role:       invitation.role,
+      id:           invitation.id,
+      org_name:     invitation.org_name,
+      org_slug:     invitation.org_slug,
+      email:        invitation.email,
+      role:         invitation.role,
       inviter_name: invitation.inviter_name,
       expires_at:   invitation.expires_at,
       accepted_at:  invitation.accepted_at,
@@ -30,7 +28,6 @@ router.get(
   })
 );
 
-/* POST /invitations/:token/accept */
 router.post(
   "/:token/accept",
   asyncHandler(async (req, res) => {
@@ -42,7 +39,7 @@ router.post(
 
     try {
       const invitation = await service.acceptInvitation(
-        req.params.token,
+        req.params.token as string,
         userId,
         userEmail
       );
@@ -53,7 +50,6 @@ router.post(
   })
 );
 
-/* GET /invitations?orgId=... — list pending invites */
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -68,11 +64,10 @@ router.get(
   })
 );
 
-/* DELETE /invitations/:id — revoke */
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    await service.revokeInvitation(req.params.id);
+    await service.revokeInvitation(req.params.id as string);
     return ok(res, { revoked: true });
   })
 );

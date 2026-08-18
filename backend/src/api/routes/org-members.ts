@@ -1,5 +1,3 @@
-// backend/src/api/routes/org-members.ts
-
 import { Router } from "express";
 import { ok, created, badRequest, notFound } from "../lib/response";
 import { asyncHandler } from "../middleware/errorHandler";
@@ -10,7 +8,6 @@ import { query } from "../../lib/db";
 
 const router = Router();
 
-/* GET /org-members?orgId=... */
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -25,7 +22,6 @@ router.get(
   })
 );
 
-/* POST /org-members/invite */
 router.post(
   "/invite",
   asyncHandler(async (req, res) => {
@@ -57,7 +53,6 @@ router.post(
   })
 );
 
-/* PATCH /org-members/:userId */
 router.patch(
   "/:userId",
   asyncHandler(async (req, res) => {
@@ -73,7 +68,7 @@ router.patch(
 
     const updated = await memberService.updateMemberRole(
       orgId,
-      req.params.userId,
+      req.params.userId as string,
       role
     );
 
@@ -85,7 +80,6 @@ router.patch(
   })
 );
 
-/* DELETE /org-members/:userId */
 router.delete(
   "/:userId",
   asyncHandler(async (req, res) => {
@@ -95,7 +89,7 @@ router.delete(
       return badRequest(res, "orgId query parameter required");
     }
 
-    await memberService.removeMember(orgId, req.params.userId);
+    await memberService.removeMember(orgId, req.params.userId as string);
     return ok(res, { removed: true });
   })
 );

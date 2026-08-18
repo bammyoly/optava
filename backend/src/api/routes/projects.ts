@@ -1,5 +1,3 @@
-// backend/src/api/routes/projects.ts
-
 import { Router } from "express";
 import { ok, created, badRequest, notFound } from "../lib/response";
 import { asyncHandler } from "../middleware/errorHandler";
@@ -40,9 +38,8 @@ router.post(
   })
 );
 
-/* GET /projects/:id */
 router.get("/:id", asyncHandler(async (req, res) => {
-  const project = await service.getProject(req.params.id);
+  const project = await service.getProject(req.params.id as string);
 
   if (!project) {
     return notFound(res, "Project not found");
@@ -51,9 +48,8 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return ok(res, project);
 }));
 
-/* GET /projects/:id/stats */
 router.get("/:id/stats", asyncHandler(async (req, res) => {
-  const stats = await service.getProjectStats(req.params.id);
+  const stats = await service.getProjectStats(req.params.id as string);
   return ok(res, stats);
 }));
 
