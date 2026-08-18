@@ -1,0 +1,28 @@
+# backend/render.yaml
+
+services:
+  - type: web
+    name: optava-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node dist/api/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: COCKROACH_URL
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: BEDROCK_MODEL_ID
+        sync: false
+      - key: BEDROCK_EMBED_MODEL_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
