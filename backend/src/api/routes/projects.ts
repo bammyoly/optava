@@ -1,0 +1,58 @@
+import { Router } from "express";
+import { ok, notFound } from "../lib/response";
+import { asyncHandler } from "../middleware/errorHandler";
+import * as service from "../services/projects";
+
+const router = Router();
+
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { orgId, name, description } = req.body;
+
+    console.log("[POST /projects] Body:", { orgId, name, description });
+
+    if (!orgId || !name) {
+      return badRequest(res, "orgId and name are required");
+    }
+
+    // Verify the org exists
+    const orgCheck = await query(
+      `SELECT id FROM organizations WHERE id = $1`,
+      [orgId]
+    );
+
+    if (orgCheck.rows.length === 0) {
+      return notFound(res, "Organization not found");
+    }
+
+    const result = await query(
+      `INSERT INTO projects (org_id, name, description, status)
+       VALUES ($1, $2, $3, 'active')
+       RETURNING *`,
+      [orgId, name, description || null]
+    );
+
+    console.log("[POST /projects] Created:", result.rows[0].id);
+    return created(res, result.rows[0]);
+  })
+);
+
+/* GET /projects/:id */
+router.get("/:id", asyncHandler(async (req, res) => {
+  const project = await service.getProject(req.params.id);
+
+  if (!project) {
+    return notFound(res, "Project not found");
+  }
+
+  return ok(res, project);
+}));
+
+/* GET /projects/:id/stats */
+router.get("/:id/stats", asyncHandler(async (req, res) => {
+  const stats = await service.getProjectStats(req.params.id);
+  return ok(res, stats);
+}));
+
+export default router;
