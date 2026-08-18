@@ -1,6 +1,4 @@
 ## README
-
-```markdown
 # 🧠 Optava AI
 
 > An AI project manager with persistent memory, built on
@@ -177,7 +175,7 @@ Both messages auto-embedded → memory_embeddings
 ### Frontend
 
 | Layer     | Technology              | Purpose                      |
-|-----------|-------------------------|------------------------------|
+|-----------|--------------------------|------------------------------|
 | Framework | Next.js 15 (App Router) | React framework with RSC     |
 | Language  | TypeScript              | End-to-end type safety       |
 | Styling   | Tailwind CSS v4         | Utility-first CSS            |
@@ -188,13 +186,13 @@ Both messages auto-embedded → memory_embeddings
 ### Backend
 
 | Layer     | Technology        | Purpose                          |
-|-----------|-------------------|----------------------------------|
+|-----------|--------------------|-----------------------------------|
 | Runtime   | Node.js 20+       | Server runtime                   |
 | Framework | Express           | HTTP server                      |
 | Language  | TypeScript        | End-to-end type safety           |
 | Database  | CockroachDB Cloud | Distributed SQL + Vector + MCP   |
-| Driver    | pg                | PostgreSQL-compatible client     |
-| AI        | Amazon Bedrock    | Claude Haiku 4.5 + Titan Embed   |
+| Driver    | pg                 | PostgreSQL-compatible client     |
+| AI        | Amazon Bedrock     | Claude Haiku 4.5 + Titan Embed   |
 
 ---
 
@@ -279,13 +277,13 @@ optava/
 ### User Table
 
 | Table   | Purpose                          |
-|---------|----------------------------------|
+|---------|-----------------------------------|
 | `users` | Workspace members (name, email)  |
 
 ### Organization Tables
 
 | Table             | Purpose                                         |
-|-------------------|-------------------------------------------------|
+|--------------------|---------------------------------------------------|
 | `organizations`   | Workspaces (name, slug, created_by)             |
 | `org_members`     | Memberships with roles (owner/admin/member)     |
 | `org_invitations` | Email invitation tokens with expiry             |
@@ -293,7 +291,7 @@ optava/
 ### Auth Tables (retained for future reintroduction)
 
 | Table                 | Purpose                   |
-|-----------------------|---------------------------|
+|------------------------|-----------------------------|
 | `accounts`            | OAuth provider links      |
 | `sessions`            | Active database sessions  |
 | `verification_tokens` | Email verification tokens |
@@ -301,7 +299,7 @@ optava/
 ### Project Tables
 
 | Table               | Purpose                                               |
-|---------------------|-------------------------------------------------------|
+|----------------------|---------------------------------------------------------|
 | `projects`          | Projects scoped to an org                             |
 | `tasks`             | Kanban tasks — status, priority, assignee             |
 | `decisions`         | Decision log — context, rationale, alternatives       |
@@ -391,7 +389,7 @@ await transaction(async (client) => {
 ### 5. Additional Features
 
 | Feature         | How Used                                          |
-|-----------------|---------------------------------------------------|
+|------------------|-----------------------------------------------------|
 | UUID PKs        | `gen_random_uuid()` on all 16 tables              |
 | JSONB columns   | metadata, alternatives, tags, source_counts       |
 | Cascade deletes | Clean org/project deletion across all child tables|
@@ -481,7 +479,7 @@ Base URL: `http://localhost:3001/api`
 ### Key Endpoints
 
 | Method | Path                              | Description                      |
-|--------|-----------------------------------|----------------------------------|
+|--------|-------------------------------------|-------------------------------------|
 | GET    | `/health`                         | Server health check              |
 | GET    | `/projects/:id/stats`             | Project stats + memory counts    |
 | POST   | `/decisions`                      | Create + auto-embed decision     |
@@ -573,7 +571,7 @@ npm run dev
 ### CockroachDB Features
 
 | Feature             | How Used                                              |
-|---------------------|-------------------------------------------------------|
+|----------------------|----------------------------------------------------------|
 | Distributed SQL     | All 16 tables — structured project data               |
 | Native VECTOR(1024) | `memory_embeddings` — 1024d per memory record         |
 | Vector Index        | `CREATE VECTOR INDEX` — similarity search             |
@@ -587,7 +585,7 @@ npm run dev
 ### AWS Services
 
 | Service          | How Used                                              |
-|------------------|-------------------------------------------------------|
+|-------------------|----------------------------------------------------------|
 | Amazon Bedrock   | Managed model inference — zero infrastructure         |
 | Claude Haiku 4.5 | MCP planner + RAG chat + AI briefings                 |
 | Titan Embed v2   | 1024d embeddings for every memory write and query     |
@@ -595,7 +593,7 @@ npm run dev
 ### Judging Criteria
 
 | Criterion              | Evidence                                                               |
-|------------------------|------------------------------------------------------------------------|
+|-------------------------|---------------------------------------------------------------------------|
 | Agentic Memory Design  | RAG + MCP dual pipeline, citations, tool badges, briefing synthesis    |
 | Technical Implementation | 16 tables, 30+ endpoints, ACID transactions, MCP, real-time embeddings |
 | Real-World Impact      | Full PM workflow — tasks, decisions, chat, briefings, team             |
@@ -624,7 +622,3 @@ MIT — see [LICENSE](./LICENSE)
 
 Built for the **CockroachDB × AWS Hackathon**.
 Powered by CockroachDB Cloud, Amazon Bedrock, and Next.js 15.
-```
-
----
-
