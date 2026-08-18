@@ -1,5 +1,4 @@
-## README
-# 🧠 Optava AI
+# Optava AI
 
 > An AI project manager with persistent memory, built on
 > CockroachDB and AWS Bedrock.
@@ -38,134 +37,69 @@ Traditional PM tools store data. Optava **understands** it.
 
 ## 🏗️ Architectural Flow
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     USER  (Browser)                          │
-│           http://localhost:3000  —  Next.js 15               │
-│                                                              │
-│  Landing → Setup → Dashboard → Chat → Tasks → Decisions →   │
-│            Briefings → Team → Settings                       │
-└─────────────────────────┬────────────────────────────────────┘
-                          │ REST / HTTP
-                          ▼
-┌──────────────────────────────────────────────────────────────┐
-│              Express API  (Node.js 20+)                      │
-│              http://localhost:3001/api                       │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │              DUAL-PATH CHAT PIPELINE                   │   │
-│  │                                                        │   │
-│  │  User message                                          │   │
-│  │       │                                                │   │
-│  │       ├──────────────────────────────────────────────► │   │
-│  │       │         PATH A: Vector Search (RAG)            │   │
-│  │       │         Titan Embed → float[1024]              │   │
-│  │       │         CockroachDB <=> cosine similarity      │   │
-│  │       │         → top 5 memories                       │   │
-│  │       │                                                │   │
-│  │       └──────────────────────────────────────────────► │   │
-│  │                 PATH B: MCP Tool Calling               │   │
-│  │                 Claude decides which tools to call     │   │
-│  │                 ├── query_project_memory               │   │
-│  │                 ├── get_project_decisions              │   │
-│  │                 ├── get_project_tasks                  │   │
-│  │                 ├── get_memory_stats                   │   │
-│  │                 └── run_sql_query                      │   │
-│  │                 → direct CockroachDB results           │   │
-│  │                                                        │   │
-│  │  Both results injected into Claude system prompt       │   │
-│  │       │                                                │   │
-│  │       ▼                                                │   │
-│  │  Claude Haiku 4.5 → grounded response + citations      │   │
-│  │       │                                                │   │
-│  │       ▼                                                │   │
-│  │  Response + vector citations + MCP tools used → UI     │   │
-│  │  New messages auto-embedded → memory_embeddings        │   │
-│  └───────────────────────────────────────────────────────┘   │
-└──────────────┬────────────────────────────┬──────────────────┘
-               │                            │
-               ▼                            ▼
-┌──────────────────────────┐   ┌────────────────────────────┐
-│    CockroachDB Cloud     │   │      Amazon Bedrock         │
-│                          │   │                             │
-│  Distributed SQL         │   │  Claude Haiku 4.5           │
-│  ──────────────          │   │  ├─ MCP tool planner        │
-│  16 tables               │   │  ├─ RAG chat responses      │
-│  ACID transactions       │   │  └─ AI briefings            │
-│  UUID PKs                │   │                             │
-│  JSONB columns           │   │  Titan Embed v2             │
-│  Cascade deletes         │   │  ├─ Query embedding         │
-│                          │   │  ├─ Decision embedding      │
-│  VECTOR(1024) Index      │   │  ├─ Note embedding          │
-│  ──────────────          │   │  └─ Conversation embedding  │
-│  memory_embeddings       │   └────────────────────────────┘
-│  cosine similarity <=>   │
-│  CREATE VECTOR INDEX     │
-│                          │
-│  MCP Tool Layer          │
-│  ──────────────          │
-│  5 read-only tools       │
-│  Claude queries DB       │
-│  directly per message    │
-└──────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Client["🌐 Browser — Next.js 15 (localhost:3000)"]
+        UI["Landing → Setup → Dashboard → Chat → Tasks →<br/>Decisions → Briefings → Team → Settings"]
+    end
+
+    subgraph API["⚙️ Express API — Node.js 20+ (localhost:3001/api)"]
+        MSG["User message"]
+        PathA["Path A — Vector Search (RAG)<br/>Titan Embed → float[1024]<br/>CockroachDB cosine similarity<br/>→ top 5 memories"]
+        PathB["Path B — MCP Tool Calling<br/>Claude selects tools:<br/>query_project_memory · get_project_decisions<br/>get_project_tasks · get_memory_stats · run_sql_query"]
+        Merge["Both results injected into<br/>Claude system prompt"]
+        Gen["Claude Haiku 4.5 →<br/>grounded response + citations"]
+        Out["Response + citations + tool badges → UI<br/>New messages auto-embedded"]
+    end
+
+    subgraph CRDB["🪳 CockroachDB Cloud"]
+        SQL["Distributed SQL — 16 tables<br/>ACID · UUID PKs · JSONB · cascade deletes"]
+        VEC["VECTOR(1024) index<br/>memory_embeddings · cosine similarity"]
+        MCP["MCP tool layer<br/>5 read-only tools"]
+    end
+
+    subgraph Bedrock["🤖 Amazon Bedrock"]
+        Haiku["Claude Haiku 4.5<br/>MCP planner · RAG chat · briefings"]
+        Titan["Titan Embed v2<br/>query · decision · note · conversation embeddings"]
+    end
+
+    UI -->|REST / HTTP| MSG
+    MSG --> PathA
+    MSG --> PathB
+    PathA --> Merge
+    PathB --> Merge
+    Merge --> Gen --> Out
+
+    PathA -.-> VEC
+    PathB -.-> MCP
+    MCP -.-> SQL
+    VEC -.-> SQL
+    Gen -.-> Haiku
+    PathA -.-> Titan
 ```
 
-### Memory Write Pipeline
+### Memory write pipeline
 
-```
-Any write  (decision / note / conversation / task)
-  │
-  ▼
-① Structured DB insert
-  (decisions / notes / conversations / standups tables)
-  │
-  ▼
-② memory-text.ts converts record → rich text string
-  │
-  ▼
-③ POST to Bedrock Titan Embed v2
-  returns float[1024]
-  │
-  ▼
-④ INSERT INTO memory_embeddings
-  (project_id, source_type, source_id, content, embedding, metadata)
-  │
-  ▼
-⑤ Instantly queryable via <=> cosine similarity
-  AND via MCP tools for direct structured access
+```mermaid
+flowchart LR
+    A["① Any write<br/>decision / note / conversation / task"] --> B["② Structured DB insert"]
+    B --> C["③ memory-text.ts<br/>record → rich text"]
+    C --> D["④ Bedrock Titan Embed v2<br/>→ float[1024]"]
+    D --> E["⑤ INSERT INTO<br/>memory_embeddings"]
+    E --> F["⑥ Queryable via cosine<br/>similarity + MCP tools"]
 ```
 
-### RAG + MCP Read Pipeline
+### RAG + MCP read pipeline
 
-```
-User sends chat message
-  │
-  ├─── PATH A: Vector Search ──────────────────────────────────
-  │    Embed query → Titan Embed v2 → float[1024]
-  │    SELECT ... FROM memory_embeddings
-  │    ORDER BY embedding <=> $query_vec::vector LIMIT 5
-  │    → top 5 semantically similar memories
-  │
-  └─── PATH B: MCP Tool Calling ───────────────────────────────
-       Claude Haiku (temperature=0) plans which tools to call
-       executes in parallel against CockroachDB:
-         query_project_memory  → memory_embeddings table
-         get_project_decisions → decisions table
-         get_project_tasks     → tasks table (real-time status)
-         get_memory_stats      → aggregate counts
-         run_sql_query         → any SELECT (read-only guard)
-       → structured DB results
-
-Both paths merged into Claude system prompt
-  │
-  ▼
-Claude Haiku 4.5 generates grounded response
-  │
-  ▼
-Response + vector citations (%) + MCP tool badges → UI
-  │
-  ▼
-Both messages auto-embedded → memory_embeddings
+```mermaid
+flowchart TD
+    Q["User sends chat message"] --> A["Path A: Vector Search<br/>embed query → top 5 similar memories"]
+    Q --> B["Path B: MCP Tool Calling<br/>Claude plans + runs tools in parallel"]
+    A --> M["Merged into Claude system prompt"]
+    B --> M
+    M --> G["Claude Haiku 4.5 generates<br/>grounded response"]
+    G --> U["Response + citations (%) +<br/>MCP tool badges → UI"]
+    U --> E["Both messages re-embedded<br/>→ memory_embeddings"]
 ```
 
 ---
@@ -198,77 +132,84 @@ Both messages auto-embedded → memory_embeddings
 
 ## 📁 Project Structure
 
+<details>
+<summary><strong>frontend/</strong> — Next.js 15 app (click to expand)</summary>
+
 ```
-optava/
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx                    # Landing page
-│   │   ├── setup/page.tsx              # Create org + project
-│   │   └── app/                        # Protected app pages
-│   │       ├── layout.tsx              # DB context loader
-│   │       ├── page.tsx                # Dashboard (Overview·Analytics·Memory)
-│   │       ├── chat/page.tsx           # AI chat + MCP panel
-│   │       ├── tasks/page.tsx          # Kanban (Board·Timeline·Backlog)
-│   │       ├── decisions/page.tsx      # Log (Timeline·Categories·Insights)
-│   │       ├── standup/page.tsx        # AI briefings
-│   │       ├── team/page.tsx           # Team (Overview·Expertise·Activity)
-│   │       └── settings/page.tsx       # Settings (General·Members·Danger)
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── AppShell.tsx            # Tab-aware layout wrapper
-│   │   │   ├── Sidebar.tsx             # Navigation + org context
-│   │   │   └── Topbar.tsx              # Tabs + search
-│   │   ├── OrgContext.tsx              # Organization React context
-│   │   ├── QueryProvider.tsx           # TanStack Query setup
-│   │   └── ThemeProvider.tsx           # Theme wrapper
-│   ├── hooks/
-│   │   └── useApi.ts                   # All typed data fetching hooks
-│   ├── lib/
-│   │   └── api.ts                      # Typed API client
-│   └── middleware.ts                   # Public passthrough
-│
-├── backend/
-│   ├── src/
-│   │   ├── api/
-│   │   │   ├── routes/
-│   │   │   │   ├── projects.ts
-│   │   │   │   ├── decisions.ts        # CRUD + auto-embed
-│   │   │   │   ├── tasks.ts            # CRUD + status updates
-│   │   │   │   ├── notes.ts            # CRUD + auto-embed
-│   │   │   │   ├── conversations.ts    # Chat session history
-│   │   │   │   ├── standups.ts         # AI briefing generation
-│   │   │   │   ├── search.ts           # Semantic vector search
-│   │   │   │   ├── chat.ts             # RAG + MCP pipeline
-│   │   │   │   ├── team.ts             # Team member stats
-│   │   │   │   ├── organizations.ts    # Org CRUD
-│   │   │   │   ├── org-members.ts      # Member management
-│   │   │   │   ├── invitations.ts      # Invite tokens
-│   │   │   │   └── debug.ts            # Dev utilities
-│   │   │   ├── services/
-│   │   │   │   ├── chat.ts             # sendMessage() RAG + MCP
-│   │   │   │   ├── standups.ts         # generateStandup()
-│   │   │   │   └── ...                 # other service modules
-│   │   │   ├── lib/
-│   │   │   │   └── response.ts         # JSON envelope
-│   │   │   ├── middleware/
-│   │   │   │   ├── errorHandler.ts
-│   │   │   │   └── logger.ts
-│   │   │   └── index.ts                # Express entry point
-│   │   ├── db/
-│   │   │   ├── migrations/
-│   │   │   │   └── 001_initial_schema.sql  # 16 tables
-│   │   │   ├── migrate.ts
-│   │   │   └── reset.ts
-│   │   └── lib/
-│   │       ├── db.ts                   # CockroachDB pool + tx helper
-│   │       ├── bedrock.ts              # Claude + Titan clients
-│   │       ├── embeddings.ts           # Vector search wrapper
-│   │       ├── mcp-client.ts           # MCP tool definitions + executor
-│   │       ├── memory-text.ts          # Record → embeddable text
-│   │       └── types.ts                # Shared TypeScript types
-│   └── package.json
-└── README.md
+frontend/
+├── app/
+│   ├── page.tsx                # Landing page
+│   ├── setup/page.tsx          # Create org + project
+│   └── app/                    # Protected app pages
+│       ├── layout.tsx          # DB context loader
+│       ├── page.tsx            # Dashboard — Overview · Analytics · Memory
+│       ├── chat/page.tsx       # AI chat + MCP panel
+│       ├── tasks/page.tsx      # Kanban — Board · Timeline · Backlog
+│       ├── decisions/page.tsx  # Log — Timeline · Categories · Insights
+│       ├── standup/page.tsx    # AI briefings
+│       ├── team/page.tsx       # Team — Overview · Expertise · Activity
+│       └── settings/page.tsx   # Settings — General · Members · Danger
+├── components/
+│   ├── layout/
+│   │   ├── AppShell.tsx        # Tab-aware layout wrapper
+│   │   ├── Sidebar.tsx         # Navigation + org context
+│   │   └── Topbar.tsx          # Tabs + search
+│   ├── OrgContext.tsx          # Organization React context
+│   ├── QueryProvider.tsx       # TanStack Query setup
+│   └── ThemeProvider.tsx       # Theme wrapper
+├── hooks/useApi.ts             # All typed data-fetching hooks
+├── lib/api.ts                  # Typed API client
+└── middleware.ts               # Public passthrough
 ```
+
+</details>
+
+<details>
+<summary><strong>backend/</strong> — Express API (click to expand)</summary>
+
+```
+backend/
+└── src/
+    ├── api/
+    │   ├── routes/
+    │   │   ├── projects.ts
+    │   │   ├── decisions.ts        # CRUD + auto-embed
+    │   │   ├── tasks.ts            # CRUD + status updates
+    │   │   ├── notes.ts            # CRUD + auto-embed
+    │   │   ├── conversations.ts    # Chat session history
+    │   │   ├── standups.ts         # AI briefing generation
+    │   │   ├── search.ts           # Semantic vector search
+    │   │   ├── chat.ts             # RAG + MCP pipeline
+    │   │   ├── team.ts             # Team member stats
+    │   │   ├── organizations.ts    # Org CRUD
+    │   │   ├── org-members.ts      # Member management
+    │   │   ├── invitations.ts      # Invite tokens
+    │   │   └── debug.ts            # Dev utilities
+    │   ├── services/
+    │   │   ├── chat.ts             # sendMessage() — RAG + MCP
+    │   │   ├── standups.ts         # generateStandup()
+    │   │   └── ...                 # other service modules
+    │   ├── lib/response.ts         # JSON envelope
+    │   ├── middleware/
+    │   │   ├── errorHandler.ts
+    │   │   └── logger.ts
+    │   └── index.ts                # Express entry point
+    ├── db/
+    │   ├── migrations/001_initial_schema.sql  # 16 tables
+    │   ├── migrate.ts
+    │   └── reset.ts
+    └── lib/
+        ├── db.ts                   # CockroachDB pool + tx helper
+        ├── bedrock.ts              # Claude + Titan clients
+        ├── embeddings.ts           # Vector search wrapper
+        ├── mcp-client.ts           # MCP tool definitions + executor
+        ├── memory-text.ts          # Record → embeddable text
+        └── types.ts                # Shared TypeScript types
+```
+
+</details>
+
+Top level: `optava/{frontend, backend, README.md}` — each folder above expands to the trees shown.
 
 ---
 
